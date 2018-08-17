@@ -260,7 +260,8 @@ class Templater(RTCBase):
         resp = self.get(workitem_url,
                         verify=False,
                         proxies=self.rtc_obj.proxies,
-                        headers=self.rtc_obj.headers)
+                        headers=self.rtc_obj.headers,
+                        cookies=self.rtc_obj.cookiejar)
         raw_data = xmltodict.parse(resp.content)
 
         # pre-adjust the template:

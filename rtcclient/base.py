@@ -80,7 +80,7 @@ class RTCBase(object):
             self.log.error('Failed GET request at <%s> with response: %s',
                            url,
                            response.content)
-            response.raise_for_status()
+            # response.raise_for_status()
         return response
 
     @token_expire_handler
@@ -120,7 +120,7 @@ class RTCBase(object):
                            url,
                            response.content)
             self.log.info(response.status_code)
-            response.raise_for_status()
+            # response.raise_for_status()
         return response
 
     @token_expire_handler
@@ -241,7 +241,8 @@ class FieldBase(RTCBase):
         resp = self.get(self.url,
                         verify=False,
                         proxies=self.rtc_obj.proxies,
-                        headers=self.rtc_obj.headers)
+                        headers=self.rtc_obj.headers,
+                        cookies=self.rtc_obj.cookiejar)
         self.__initialize(resp)
         self.log.info("Finish the initialization for <%s %s>",
                       self.__class__.__name__, self)
@@ -304,7 +305,8 @@ class FieldBase(RTCBase):
         resp = self.get(rdf_url,
                         verify=False,
                         proxies=self.rtc_obj.proxies,
-                        headers=self.rtc_obj.headers)
+                        headers=self.rtc_obj.headers,
+                        cookies=self.rtc_obj.cookiejar)
         raw_data = xmltodict.parse(resp.content)
 
         root_key = list(raw_data.keys())[0]

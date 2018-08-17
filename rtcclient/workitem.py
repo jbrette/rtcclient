@@ -106,7 +106,8 @@ class Workitem(FieldBase):
         resp = self.get(comments_url,
                         verify=False,
                         proxies=self.rtc_obj.proxies,
-                        headers=headers)
+                        headers=headers,
+                        cookies=self.rtc_obj.cookiejar)
 
         raw_data = xmltodict.parse(resp.content)
 

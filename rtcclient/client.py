@@ -14,6 +14,7 @@ from rtcclient.template import Templater
 from rtcclient import _search_path
 from rtcclient.query import Query
 import six
+import requests
 
 
 class RTCClient(RTCBase):
@@ -62,7 +63,8 @@ class RTCClient(RTCBase):
             raise exception.BadValue("ends_with_jazz is not boolean")
 
         self.jazz = ends_with_jazz
-        self.headers = self._get_headers()
+        self.cookiejar = self._get_cookies()
+        self.headers = {"Content-Type": self.CONTENT_XML, "Accept" : self.CONTENT_XML}
         if searchpath is None:
             self.searchpath = _search_path
         else:
@@ -76,58 +78,75 @@ class RTCClient(RTCBase):
     def get_rtc_obj(self):
         return self
 
-    def _get_headers(self):
+    def _get_cookies(self):
         if self.jazz is True:
             _allow_redirects = True
         else:
             _allow_redirects = False
 
+        jar = requests.cookies.RequestsCookieJar()
         _headers = {"Content-Type": self.CONTENT_XML}
-        resp = self.get(self.url + "/authenticated/identity",
+        # resp = self.get("https://sdp.web.att.com/jts/dashboards/44023",
+        resp = self.get("https://sdp.web.att.com/fa3ccm1/oslc/workitems/453293",
                         verify=False,
                         headers=_headers,
                         proxies=self.proxies,
-                        allow_redirects=_allow_redirects)
+                        allow_redirects=False,
+                        cookies=jar)
+
+        authredirect = resp.headers.get("X-JSA-AUTHORIZATION-REDIRECT")
+        if resp.headers.get("set-cookie") is not None:
+            jar.update(resp.cookies)
+
+        resp = self.get(authredirect,
+                        verify=False,
+                        headers={"Content-Type": self.CONTENT_URL_ENCODED},
+                        proxies=self.proxies,
+                        allow_redirects=False,
+                        cookies=jar)
 
         _headers["Content-Type"] = self.CONTENT_URL_ENCODED
         if resp.headers.get("set-cookie") is not None:
-            _headers["Cookie"] = resp.headers.get("set-cookie")
+            jar.update(resp.cookies)
 
         credentials = urlencode({"j_username": self.username,
                                  "j_password": self.password})
 
-        resp = self.post(self.url + "/authenticated/j_security_check",
+        resp = self.post("https://sdp.web.att.com:443/jazzop/j_security_check",
                          data=credentials,
                          verify=False,
-                         headers=_headers,
+                         headers={"Content-Type": self.CONTENT_URL_ENCODED},
                          proxies=self.proxies,
-                         allow_redirects=_allow_redirects)
+                         allow_redirects=False,
+                         cookies=jar)
 
-        # authfailed
-        authfailed = resp.headers.get("x-com-ibm-team-repository-web-auth-msg")
-        if authfailed == "authfailed":
-            raise exception.RTCException("Authentication Failed: "
-                                         "Invalid username or password")
+        if resp.headers.get("set-cookie") is not None:
+            jar.update(resp.cookies)
 
-        # fix issue #68
-        if not _allow_redirects:
-            if resp.headers.get("set-cookie") is not None:
-                _headers["Cookie"] = resp.headers.get("set-cookie")
-
-        resp = self.get(self.url + "/authenticated/identity",
+        resp = self.get(resp.headers.get("location"),
                         verify=False,
-                        headers=_headers,
+                        headers={"Content-Type": self.CONTENT_URL_ENCODED},
                         proxies=self.proxies,
-                        allow_redirects=_allow_redirects)
+                        allow_redirects=False,
+                        cookies=jar)
 
-        # fix issue #68
-        if not _allow_redirects:
-            _headers["Cookie"] += "; " + resp.headers.get("set-cookie")
-        else:
-            _headers["Cookie"] = resp.headers.get("set-cookie")
+        if resp.headers.get("set-cookie") is not None:
+            jar.update(resp.cookies)
 
-        _headers["Accept"] = self.CONTENT_XML
-        return _headers
+        resp = self.get(resp.headers.get("location"),
+                        verify=False,
+                        headers={"Content-Type": self.CONTENT_URL_ENCODED},
+                        proxies=self.proxies,
+                        allow_redirects=False,
+                        cookies=jar)
+
+        jar2 = requests.cookies.RequestsCookieJar()
+        if resp.headers.get("set-cookie") is not None:
+            jar2.update(resp.cookies)
+            for name, value in jar.items():
+                if name in ('jazzop_sso_cookie', 'oidc_bsc'):
+                    jar2.set_cookie(requests.cookies.create_cookie(name, value))
+        return jar2
 
     def relogin(self):
         """Relogin the RTC Server/Jazz when the token expires
@@ -135,8 +154,8 @@ class RTCClient(RTCBase):
         """
 
         self.log.info("Cookie expires. Relogin to get a new cookie.")
-        self.headers = None
-        self.headers = self._get_headers()
+        self.cookiejar = None
+        self.cookiejar = self._get_cookies()
         self.log.debug("Successfully relogin.")
 
     def getProjectAreas(self, archived=False, returned_properties=None):
@@ -910,7 +929,8 @@ class RTCClient(RTCBase):
             resp = self.get(req_url,
                             verify=False,
                             proxies=self.proxies,
-                            headers=self.headers)
+                            headers=self.headers,
+                            cookies=self.cookiejar)
             raw_data = xmltodict.parse(resp.content)
             workitem_raw = raw_data["oslc_cm:ChangeRequest"]
 
@@ -1117,7 +1137,7 @@ class RTCClient(RTCBase):
         headers['Content-Type'] = self.OSLC_CR_XML
 
         resp = self.post(url_post, verify=False,
-                         headers=headers, proxies=self.proxies,
+                         headers=headers, cookies=self.cookiejar, proxies=self.proxies,
                          data=workitem_raw)
 
         raw_data = xmltodict.parse(resp.content)
@@ -1350,10 +1370,12 @@ class RTCClient(RTCBase):
                             projectarea_id])
                   if projectarea_id else None)
 
+        # self.log.debug(self.cookiejar)
         resp = self.get(resource_url,
                         verify=False,
                         proxies=self.proxies,
-                        headers=self.headers)
+                        headers=self.headers,
+                        cookies=self.cookiejar)
         raw_data = xmltodict.parse(resp.content)
 
         try:
@@ -1401,7 +1423,8 @@ class RTCClient(RTCBase):
                 resp = self.get(url_next,
                                 verify=False,
                                 proxies=self.proxies,
-                                headers=self.headers)
+                                headers=self.headers,
+                                cookies=self.cookiejar)
                 raw_data = xmltodict.parse(resp.content)
             else:
                 break

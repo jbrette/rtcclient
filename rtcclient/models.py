@@ -188,7 +188,8 @@ class ChangeSet(FieldBase):
         resp = self.get(resource_url,
                         verify=False,
                         proxies=self.rtc_obj.proxies,
-                        headers=self.rtc_obj.headers)
+                        headers=self.rtc_obj.headers,
+                        cookies=self.rtc_obj.cookiejar)
         raw_data = xmltodict.parse(resp.content).get("scm:ChangeSet")
         common_changes = dict()
         changes = raw_data.get("changes")
@@ -295,7 +296,8 @@ class Change(FieldBase):
 
         resp = self.get(file_url,
                         verify=False,
-                        headers=self.rtc_obj.headers)
+                        headers=self.rtc_obj.headers,
+                        cookies=self.rtc_obj.cookiejar)
         file_name = re.findall(".+filename\*=UTF-8''(.+)",
                                resp.headers["content-disposition"])[0]
         file_path = os.path.join(file_folder, file_name)
