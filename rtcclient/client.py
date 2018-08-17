@@ -47,7 +47,7 @@ class RTCClient(RTCBase):
 
     log = logging.getLogger("client.RTCClient")
 
-    def __init__(self, url, username, password, proxies=None, searchpath=None,
+    def __init__(self, url, jazzopurl, username, password, proxies=None, searchpath=None,
                  ends_with_jazz=True):
         """Initialization
 
@@ -62,6 +62,7 @@ class RTCClient(RTCBase):
         if not isinstance(ends_with_jazz, bool):
             raise exception.BadValue("ends_with_jazz is not boolean")
 
+        self.jazzopurl = jazzopurl
         self.jazz = ends_with_jazz
         self.cookiejar = self._get_cookies()
         self.headers = {"Content-Type": self.CONTENT_XML, "Accept" : self.CONTENT_XML}
@@ -79,19 +80,15 @@ class RTCClient(RTCBase):
         return self
 
     def _get_cookies(self):
-        if self.jazz is True:
-            _allow_redirects = True
-        else:
-            _allow_redirects = False
+        _allow_redirects = False
 
         jar = requests.cookies.RequestsCookieJar()
         _headers = {"Content-Type": self.CONTENT_XML}
-        # resp = self.get("https://sdp.web.att.com/jts/dashboards/44023",
-        resp = self.get("https://sdp.web.att.com/fa3ccm1/oslc/workitems/453293",
+        resp = self.get(self.url + "/oslc/workitems/453293",
                         verify=False,
                         headers=_headers,
                         proxies=self.proxies,
-                        allow_redirects=False,
+                        allow_redirects=_allow_redirects,
                         cookies=jar)
 
         authredirect = resp.headers.get("X-JSA-AUTHORIZATION-REDIRECT")
@@ -102,7 +99,7 @@ class RTCClient(RTCBase):
                         verify=False,
                         headers={"Content-Type": self.CONTENT_URL_ENCODED},
                         proxies=self.proxies,
-                        allow_redirects=False,
+                        allow_redirects=_allow_redirects,
                         cookies=jar)
 
         _headers["Content-Type"] = self.CONTENT_URL_ENCODED
@@ -112,32 +109,34 @@ class RTCClient(RTCBase):
         credentials = urlencode({"j_username": self.username,
                                  "j_password": self.password})
 
-        resp = self.post("https://sdp.web.att.com:443/jazzop/j_security_check",
+        resp = self.post(self.jazzopurl + "/jazzop/j_security_check",
                          data=credentials,
                          verify=False,
                          headers={"Content-Type": self.CONTENT_URL_ENCODED},
                          proxies=self.proxies,
-                         allow_redirects=False,
+                         allow_redirects=_allow_redirects,
                          cookies=jar)
 
+        authredirect = resp.headers.get("location")
         if resp.headers.get("set-cookie") is not None:
             jar.update(resp.cookies)
 
-        resp = self.get(resp.headers.get("location"),
+        resp = self.get(authredirect,
                         verify=False,
                         headers={"Content-Type": self.CONTENT_URL_ENCODED},
                         proxies=self.proxies,
-                        allow_redirects=False,
+                        allow_redirects=_allow_redirects,
                         cookies=jar)
 
+        authredirect = resp.headers.get("location")
         if resp.headers.get("set-cookie") is not None:
             jar.update(resp.cookies)
 
-        resp = self.get(resp.headers.get("location"),
+        resp = self.get(authredirect,
                         verify=False,
                         headers={"Content-Type": self.CONTENT_URL_ENCODED},
                         proxies=self.proxies,
-                        allow_redirects=False,
+                        allow_redirects=_allow_redirects,
                         cookies=jar)
 
         jar2 = requests.cookies.RequestsCookieJar()
