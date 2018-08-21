@@ -220,7 +220,18 @@ class ChangeSet(FieldBase):
 
         return change_objs
 
+class TrackedWorkItem(FieldBase):
+    """TrackedWorkItem"""
 
+    log = logging.getLogger("models.TrackedWorkItem")
+
+    def __str__(self):
+        return self.label
+
+    def getReference(self):
+        """TBD"""
+        return "tbd"
+       
 class Change(FieldBase):
     """Change"""
 

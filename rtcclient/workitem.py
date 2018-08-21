@@ -479,6 +479,32 @@ class Workitem(FieldBase):
             return parent[0]
         return None
 
+    def getFeature(self, returned_properties=None):
+        """Get the parent workitem of this workitem
+
+        If no parent, None will be returned.
+
+        :param returned_properties: the returned properties that you want.
+            Refer to :class:`rtcclient.client.RTCClient` for more explanations
+        :return: a :class:`rtcclient.workitem.Workitem` object
+        :rtype: rtcclient.workitem.Workitem
+        """
+
+        parent_tag = ("oslc_cm:trackedWorkItem")
+        rp = returned_properties
+        parent = (self.rtc_obj
+                      ._get_paged_resources("TrackedWorkItem",
+                                            workitem_id=self.identifier,
+                                            customized_attr=parent_tag,
+                                            page_size="5",
+                                            returned_properties=rp))
+
+        # No more than one parent
+        if parent:
+            # only one element
+            return parent[0]
+        return None
+
     def getChildren(self, returned_properties=None):
         """Get all the children workitems of this workitem
 

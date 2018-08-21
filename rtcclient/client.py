@@ -6,7 +6,7 @@ from rtcclient.workitem import Workitem
 from rtcclient.models import TeamArea, Member, Administrator, PlannedFor
 from rtcclient.models import Severity, Priority, ItemType, SavedQuery
 from rtcclient.models import FiledAgainst, FoundIn, Comment, Action, State
-from rtcclient.models import IncludedInBuild, ChangeSet, Attachment
+from rtcclient.models import IncludedInBuild, ChangeSet, Attachment, TrackedWorkItem
 import logging
 from rtcclient import urlparse, urlquote, urlencode, OrderedDict
 import copy
@@ -1257,6 +1257,7 @@ class RTCClient(RTCBase):
                              "IncludedInBuild",
                              "Parent",
                              "Children",
+                             "TrackedWorkItem",
                              "ChangeSet",
                              "Attachment"]
         customized_required = ["Action",
@@ -1310,6 +1311,8 @@ class RTCClient(RTCBase):
                                                            customized_attr),
                    "Parent": "workitems/%s/%s" % (workitem_id,
                                                   customized_attr),
+                   "TrackedWorkItem": "workitems/%s/%s" % (workitem_id,
+                                                  customized_attr),
                    "Children": "workitems/%s/%s" % (workitem_id,
                                                     customized_attr),
                    "ChangeSet": "workitems/%s/%s" % (workitem_id,
@@ -1338,6 +1341,7 @@ class RTCClient(RTCBase):
                      "RunQuery": "oslc_cm:ChangeRequest",
                      "IncludedInBuild": "oslc_auto:AutomationResult",
                      "Parent": "oslc_cm:ChangeRequest",
+                     "TrackedWorkItem": "rtc_cm:Reference",
                      "Children": "oslc_cm:ChangeRequest",
                      "ChangeSet": "rtc_cm:Reference",
                      "Attachment": "rtc_cm:Attachment"
