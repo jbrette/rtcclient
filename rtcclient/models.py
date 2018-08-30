@@ -231,6 +231,18 @@ class TrackedWorkItem(FieldBase):
     def getReference(self):
         """TBD"""
         return "tbd"
+
+class TracksWorkItem(FieldBase):
+    """TrackedWorkItem"""
+
+    log = logging.getLogger("models.TracksWorkItem")
+
+    def __str__(self):
+        return self.label
+
+    def getReference(self):
+        """TBD"""
+        return "tbd"
        
 class Change(FieldBase):
     """Change"""

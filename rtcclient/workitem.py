@@ -479,7 +479,7 @@ class Workitem(FieldBase):
             return parent[0]
         return None
 
-    def getFeature(self, returned_properties=None):
+    def getTrackedWorkItem(self, returned_properties=None):
         """Get the parent workitem of this workitem
 
         If no parent, None will be returned.
@@ -525,6 +525,27 @@ class Workitem(FieldBase):
                                           customized_attr=children_tag,
                                           page_size="10",
                                           returned_properties=rp))
+
+    def getTracksWorkItem(self, returned_properties=None):
+        """Get all the tracked workitems of this workitem
+
+        If no children, None will be returned.
+
+        :param returned_properties: the returned properties that you want.
+            Refer to :class:`rtcclient.client.RTCClient` for more explanations
+        :return: a :class:`rtcclient.workitem.Workitem` object
+        :rtype: rtcclient.workitem.Workitem
+        """
+
+        children_tag = ("oslc_cm:tracksWorkItem")
+        rp = returned_properties
+        return (self.rtc_obj
+                    ._get_paged_resources("TracksWorkItem",
+                                          workitem_id=self.identifier,
+                                          customized_attr=children_tag,
+                                          page_size="10",
+                                          returned_properties=rp))
+
 
     def getChangeSets(self):
         """Get all the ChangeSets of this workitem
