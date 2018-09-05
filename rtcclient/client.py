@@ -84,7 +84,8 @@ class RTCClient(RTCBase):
 
         jar = requests.cookies.RequestsCookieJar()
         _headers = {"Content-Type": self.CONTENT_XML}
-        resp = self.get(self.url + "/oslc/workitems/453293",
+        theurl = self.url + "/oslc/workitems/453293" if ('jts' not in self.url) else 'https://sdp.web.att.com/jts/users/AS1452'
+        resp = self.get(theurl,
                         verify=False,
                         headers=_headers,
                         proxies=self.proxies,
@@ -131,7 +132,7 @@ class RTCClient(RTCBase):
         authredirect = resp.headers.get("location")
         if resp.headers.get("set-cookie") is not None:
             jar.update(resp.cookies)
-
+  
         resp = self.get(authredirect,
                         verify=False,
                         headers={"Content-Type": self.CONTENT_URL_ENCODED},
@@ -144,6 +145,8 @@ class RTCClient(RTCBase):
             jar2.update(resp.cookies)
             for name, value in jar.items():
                 if name in ('jazzop_sso_cookie', 'oidc_bsc'):
+                    jar2.set_cookie(requests.cookies.create_cookie(name, value))
+                elif name.startswith('JSA_CSRF_'):
                     jar2.set_cookie(requests.cookies.create_cookie(name, value))
         return jar2
 
@@ -442,7 +445,7 @@ class RTCClient(RTCBase):
     def getOwnedBy(self, email, projectarea_id=None,
                    projectarea_name=None):
 
-        if not isinstance(email, six.string_types) or "@" not in email:
+        if not isinstance(email, six.string_types):
             excp_msg = "Please specify a valid email address name"
             self.log.error(excp_msg)
             raise exception.BadValue(excp_msg)

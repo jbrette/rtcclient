@@ -83,6 +83,37 @@ class RTCBase(object):
             # response.raise_for_status()
         return response
 
+    def myget(self, url,
+            verify=False, headers=None, proxies=None,
+            timeout=60, **kwargs):
+        """Sends a GET request. Refactor from requests module
+
+        :param url: URL for the new :class:`Request` object.
+        :param verify: (optional) if ``True``, the SSL cert will be verified.
+            A CA_BUNDLE path can also be provided.
+        :param headers: (optional) Dictionary of HTTP Headers to send with
+            the :class:`Request`.
+        :param proxies: (optional) Dictionary mapping protocol to the URL of
+            the proxy.
+        :param timeout: (optional) How long to wait for the server to send data
+            before giving up, as a float, or a :ref:`(connect timeout, read
+            timeout) <timeouts>` tuple.
+        :type timeout: float or tuple
+        :param \*\*kwargs: Optional arguments that ``request`` takes.
+        :return: :class:`Response <Response>` object
+        :rtype: requests.Response
+        """
+
+        self.log.debug("Get response from %s", url)
+        response = requests.get(url, verify=verify, headers=headers,
+                                proxies=proxies, timeout=timeout, **kwargs)
+        if response.status_code != 200:
+            self.log.error('Failed GET request at <%s> with response: %s',
+                           url,
+                           response.content)
+            # response.raise_for_status()
+        return response
+
     @token_expire_handler
     def post(self, url, data=None, json=None,
              verify=False, headers=None, proxies=None,

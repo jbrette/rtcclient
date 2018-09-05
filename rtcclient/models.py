@@ -21,6 +21,7 @@ class Member(FieldBase):
     log = logging.getLogger("models.Member")
 
     def __init__(self, url, rtc_obj, raw_data=None):
+        self.bypass = True
         FieldBase.__init__(self, url, rtc_obj, raw_data=raw_data)
         # add a new attribute mainly for the un-recorded member use
         self.email = urlunquote(self.url.split("/")[-1])
@@ -31,11 +32,39 @@ class Member(FieldBase):
         return self.email
 
     def _initialize(self):
-        pass
+        """Initialize the object from the request"""
 
-    def __initialize(self):
-        pass
+        if self.bypass:
+            return
 
+        self.log.debug("Start initializing data from %s",
+                       self.url)
+        resp = self.myget(self.url,
+                          verify=False,
+                          proxies=self.rtc_obj.proxies,
+                          headers={"Content-Type": self.CONTENT_URL_ENCODED},
+                          cookies=self.rtc_obj.cookiejar,
+                          allow_redirects=False)
+        authredirect = resp.headers.get("location")
+        resp = self.myget(authredirect,
+                          verify=False,
+                          proxies=self.rtc_obj.proxies,
+                          headers=self.rtc_obj.headers,
+                          cookies=self.rtc_obj.cookiejar)
+        self.__initialize(resp)
+        self.log.info("Finish the initialization for <%s %s>",
+                      self.__class__.__name__, self)
+
+    def __initialize(self, resp):
+        """Initialize from the response"""
+
+        if self.bypass:
+            return
+
+        raw_data = xmltodict.parse(resp.content)
+        root_key = list(raw_data.keys())[0]
+        self.raw_data = raw_data.get(root_key)
+        self.__initializeFromRaw()
 
 class Administrator(Member):
     """The administrator of the project area"""
