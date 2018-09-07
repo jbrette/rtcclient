@@ -2,6 +2,7 @@ import abc
 import logging
 from rtcclient import requests
 import xmltodict
+from copy import deepcopy
 from rtcclient import urlunquote, OrderedDict
 from rtcclient import exception
 from rtcclient.utils import token_expire_handler
@@ -242,6 +243,8 @@ class RTCBase(object):
             url = url[:-1]
         return url
 
+# JEB: Clean that up later
+HACKED = {}
 
 class FieldBase(RTCBase):
     __metaclass__ = abc.ABCMeta
@@ -314,10 +317,15 @@ class FieldBase(RTCBase):
                     # request detailed info using rdf:resource
                     value = list(value.values())[0]
 
-                    try:
-                        value = self.__get_rdf_resource_title(value)
-                    except (exception.RTCException, Exception):
-                        self.log.error("Unable to handle %s", value)
+                    cached_key = value
+                    if (cached_key in HACKED):
+                        value = deepcopy(HACKED[cached_key])
+                    else:
+                        try:
+                            value = self.__get_rdf_resource_title(value)
+                            HACKED[cached_key] = value
+                        except (exception.RTCException, Exception):
+                            self.log.error("Unable to handle %s", value)
             self.setattr(attr, value)
 
     def __get_rdf_resource_title(self, rdf_url):
